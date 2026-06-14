@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>테트리스 피하기 - 최종본</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            /* 모바일 터치 시 파란색 깜빡임 제거 */
+            -webkit-tap-highlight-color: transparent;
+            /* 텍스트 선택 방지 */
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', sans-serif;
+            overflow: hidden;
+            padding: 10px;
+        }
+
+        .game-wrapper {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+            max-width: 100%;
+        }
+
+        .game-container {
+            position: relative;
+        }
+
+        #gameCanvas {
+            border: 4px solid #4a9eff;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(74, 158, 255, 0.3);
+            background-color: #0a0a15;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .info-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 12px;
+            color: white;
+            min-width: 200px;
+        }
+
+        .info-panel h2 {
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            color: #4a9eff;
+            text-align: center;
+        }
+
+        .stat {
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            color: #ccc;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .next-block {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .next-block h3 {
+            font-size: 0.9em;
+            margin-bottom: 10px;
+            color: #4a9eff;
+            text-align: center;
+        }
+
+        #nextBlockCanvas {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .controls {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .controls h3 {
+            font-size: 0.9em;
+            margin-bottom: 5px;
+            color: #4a9eff;
+        }
+
+        .controls p {
+            font-size: 0.85em;
+            color: #eee;
+            margin-bottom: 30px;
+        }
+
+        .key {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* 📱 모바일 가상 패드 (기본 숨김) */
+        .mobile-pad {
+            display: none;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 12px;
+            width: 100%;
+            max-width: 320px;
+            margin-top: 25px;
+        }
+
+        .touch-btn {
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(74, 158, 255, 0.5);
+            border-radius: 12px;
+            color: white;
+            font-size: 1.6em;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 60px;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+
+        .touch-btn:active {
+            background: rgba(74, 158, 255, 0.4);
+        }
+
+        .btn-up    { grid-column: 2; grid-row: 1; background: rgba(74, 158, 255, 0.2); }
+        .btn-left  { grid-column: 1; grid-row: 2; }
+        .btn-down  { grid-column: 2; grid-row: 2; background: rgba(156, 39, 176, 0.2); }
+        .btn-right { grid-column: 3; grid-row: 2; }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            border-radius: 8px;
+            z-index: 10;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .overlay.hidden { display: none; }
+        .overlay h1 { font-size: 2em; margin-bottom: 10px; color: #4a9eff; }
+        .overlay p { font-size: 1em; margin-bottom: 20px; color: #aaa; }
+        
+        .overlay .final-score {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #ffd700;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4a9eff, #2d7dd2);
+            border: none;
+            padding: 12px 35px;
+            font-size: 1.1em;
+            color: white;
+            border-radius: 30px;
+            cursor: pointer;
+        }
+
+        .phase-indicator {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.85em;
+            white-space: nowrap;
+        }
+
+        .phase-indicator.tracking { background: rgba(74, 158, 255, 0.9); color: white; }
+        .phase-indicator.locked { background: rgba(255, 193, 7, 0.9); color: black; }
+        .phase-indicator.dropping { background: rgba(244, 67, 54, 0.9); color: white; }
+        .phase-indicator.hidden { display: none; }
+
+        .timer-bar-container {
+            position: absolute;
+            bottom: -15px;
+            left: 0;
+            width: 100%;
+            height: 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .timer-bar { height: 100%; border-radius: 5px; }
+        .timer-bar.tracking { background: linear-gradient(90deg, #4a9eff, #00bcd4); }
+        .timer-bar.locked { background: linear-gradient(90deg, #ffc107, #ff9800); }
+
+        .rotate-hint {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(155, 89, 182, 0.8);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .rotate-hint.show { opacity: 1; }
+
+        /* 📱 모바일 디바이스 스타일 (화면 가로가 768px 이하) */
+        @media (max-width: 768px) {
+            body {
+                justify-content: flex-start;
+                overflow-y: auto;
+            }
+            .game-wrapper {
+                flex-direction: column;
+                align-items: center;
+                gap: 15px;
+            }
+            .info-panel {
+                width: 300px;
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: space-between;
+                padding: 15px;
+            }
+            .info-panel h2, .controls { display: none; } /* 설명란은 모바일에서 숨김 */
+            .stat { flex-direction: column; min-width: 70px; }
+            .next-block { margin-top: 0; padding-top: 0; border-top: none; }
+            .mobile-pad { display: grid; } /* 모바일 패드 표시 */
+        }
+    </style>
+</head>
+<body>
+    <div class="game-wrapper">
+        <div class="game-container">
+            <canvas id="gameCanvas" width="300" height="600"></canvas>
+            <div class="timer-bar-container">
+                <div class="timer-bar tracking" id="timerBar"></div>
+            </div>
+            <div class="phase-indicator hidden" id="phaseIndicator">추적 중...</div>
+            <div class="rotate-hint" id="rotateHint">🔄 회전!</div>
+            
+            <div class="overlay" id="startOverlay">
+                <h1>테트리스 피하기</h1>
+                <p>떨어지는 블럭을 피해 살아남아라!</p>
+                <button class="btn" onclick="startGame()">게임 시작</button>
+            </div>
+            
+            <div class="overlay hidden" id="gameOverOverlay">
+                <h1>게임 오버</h1>
+                <p>최종 점수</p>
+                <div class="final-score" id="finalScore">0</div>
+                <button class="btn" onclick="startGame()">다시 하기</button>
+            </div>
+        </div>
+        
+        <div class="info-panel">
+            <h2>🎯 점수판</h2>
+            <div class="stat">
+                <div class="stat-label">점수</div>
+                <div class="stat-value" id="score">0</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">버틴 블럭</div>
+                <div class="stat-value" id="survived">0</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">클리어 줄</div>
+                <div class="stat-value" id="lines">0</div>
+            </div>
+            
+            <div class="next-block">
+                <h3>📦 다음 블럭</h3>
+                <canvas id="nextBlockCanvas" width="120" height="80"></canvas>
+            </div>
+            
+            <div class="controls">
+                <h3>조작법</h3>
+                <p><span class="key">←</span> <span class="key">→</span> 이동</p>
+                <p><span class="key">↑</span> 점프</p>
+                <p><span class="key">↓</span> 블럭 회전</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="mobile-pad">
+        <div class="touch-btn btn-up" id="padUp">▲<span style="font-size:0.4em;margin-left:2px;">점프</span></div>
+        <div class="touch-btn btn-left" id="padLeft">◀</div>
+        <div class="touch-btn btn-down" id="padDown">▼<span style="font-size:0.4em;margin-left:2px;">회전</span></div>
+        <div class="touch-btn btn-right" id="padRight">▶</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const nextCanvas = document.getElementById('nextBlockCanvas');
+        const nextCtx = nextCanvas.getContext('2d');
+        
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30;
+        const GRAVITY = 0.6;
+        const JUMP_FORCE = -12;
+        const MOVE_SPEED = 5;
+        
+        const TRACKING_TIME = 5000;
+        const LOCKED_TIME = 2000;
+        
+        const TETROMINOES = [
+            { shape: [[1,1,1,1]], color: '#00f5ff' },
+            { shape: [[1,1],[1,1]], color: '#ffeb3b' },
+            { shape: [[0,1,0],[1,1,1]], color: '#9c27b0' },
+            { shape: [[1,0,0],[1,1,1]], color: '#2196f3' },
+            { shape: [[0,0,1],[1,1,1]], color: '#ff9800' },
+            { shape: [[0,1,1],[1,1,0]], color: '#4caf50' },
+            { shape: [[1,1,0],[0,1,1]], color: '#f44336' }
+        ];
+        
+        let grid = [];
+        let player = null;
+        let currentBlock = null;
+        let nextTetromino = null;
+        let phaseStartTime = 0;
+        let score = 0;
+        let survivedBlocks = 0;
+        let clearedLines = 0;
+        let gameRunning = false;
+        let keys = {};
+        let blockPhase = 'tracking';
+        
+        class Player {
+            constructor() {
+                this.width = BLOCK_SIZE - 6;
+                this.height = BLOCK_SIZE - 4;
+                this.x = canvas.width / 2 - this.width / 2;
+                this.y = canvas.height - this.height;
+                this.vx = 0;
+                this.vy = 0;
+                this.onGround = true;
+                this.jumpCount = 0;
+            }
+            
+            update() {
+                if (keys['ArrowLeft']) {
+                    this.vx = -MOVE_SPEED;
+                } else if (keys['ArrowRight']) {
+                    this.vx = MOVE_SPEED;
+                } else {
+                    this.vx = 0;
+                }
+                
+                this.vy += GRAVITY;
+                if (this.vy > 15) this.vy = 15;
+                
+                this.x += this.vx;
+                if (this.x < 0) this.x = 0;
+                if (this.x + this.width > canvas.width) this.x = canvas.width - this.width;
+                this.handleHorizontalCollision();
+                
+                this.y += this.vy;
+                this.handleVerticalCollision();
+                
+                if (this.y + this.height > canvas.height) {
+                    this.y = canvas.height - this.height;
+                    this.vy = 0;
+                    this.onGround = true;
+                    this.jumpCount = 0;
+                }
+            }
+            
+            handleHorizontalCollision() {
+                for (let gy = 0; gy < ROWS; gy++) {
+                    for (let gx = 0; gx < COLS; gx++) {
+                        if (!grid[gy][gx]) continue;
+                        
+                        const blockLeft = gx * BLOCK_SIZE;
+                        const blockRight = (gx + 1) * BLOCK_SIZE;
+                        const blockTop = gy * BLOCK_SIZE;
+                        const blockBottom = (gy + 1) * BLOCK_SIZE;
+                        
+                        if (this.y + this.height > blockTop + 2 && this.y < blockBottom - 2) {
+                            if (this.vx > 0 && this.x + this.width > blockLeft && this.x + this.width < blockRight) {
+                                this.x = blockLeft - this.width;
+                            }
+                            if (this.vx < 0 && this.x < blockRight && this.x > blockLeft) {
+                                this.x = blockRight;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            handleVerticalCollision() {
+                this.onGround = false;
+                
+                for (let gy = 0; gy < ROWS; gy++) {
+                    for (let gx = 0; gx < COLS; gx++) {
+                        if (!grid[gy][gx]) continue;
+                        
+                        const blockLeft = gx * BLOCK_SIZE;
+                        const blockRight = (gx + 1) * BLOCK_SIZE;
+                        const blockTop = gy * BLOCK_SIZE;
+                        const blockBottom = (gy + 1) * BLOCK_SIZE;
+                        
+                        if (this.x + this.width > blockLeft + 2 && this.x < blockRight - 2) {
+                            if (this.vy >= 0 && this.y + this.height > blockTop && this.y + this.height < blockBottom && this.y < blockTop) {
+                                this.y = blockTop - this.height;
+                                this.vy = 0;
+                                this.onGround = true;
+                                this.jumpCount = 0;
+                            }
+                            else if (this.vy < 0 && this.y < blockBottom && this.y > blockTop) {
+                                this.y = blockBottom;
+                                this.vy = 0;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            jump() {
+                if (this.onGround || this.jumpCount < 2) {
+                    this.vy = JUMP_FORCE;
+                    this.onGround = false;
+                    this.jumpCount++;
+                }
+            }
+            
+            draw() {
+                ctx.fillStyle = '#ff6b9d';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                ctx.fillStyle = 'white';
+                ctx.fillRect(this.x + 4, this.y + 6, 7, 7);
+                ctx.fillRect(this.x + this.width - 11, this.y + 6, 7, 7);
+                ctx.fillStyle = 'black';
+                ctx.fillRect(this.x + 6, this.y + 8, 3, 3);
+                ctx.fillRect(this.x + this.width - 9, this.y + 8, 3, 3);
+            }
+            
+            getRect() {
+                return { left: this.x, right: this.x + this.width, top: this.y, bottom: this.y + this.height };
+            }
+        }
+        
+        class FallingBlock {
+            constructor(tetromino) {
+                this.shape = JSON.parse(JSON.stringify(tetromino.shape));
+                this.color = tetromino.color;
+                this.gridX = 0;
+                this.gridY = 0;
+                this.lockedX = 0;
+                this.dropSpeed = 0.25;
+            }
+            
+            get width() { return this.shape[0].length; }
+            get height() { return this.shape.length; }
+            
+            rotate() {
+                const rows = this.shape.length;
+                const cols = this.shape[0].length;
+                const rotated = [];
+                for (let x = 0; x < cols; x++) {
+                    rotated[x] = [];
+                    for (let y = rows - 1; y >= 0; y--) {
+                        rotated[x][rows - 1 - y] = this.shape[y][x];
+                    }
+                }
+                this.shape = rotated;
+                if (this.gridX + this.width > COLS) this.gridX = COLS - this.width;
+                if (this.gridX < 0) this.gridX = 0;
+            }
+            
+            updatePosition(playerX) {
+                const playerCenterGrid = Math.floor((playerX + player.width / 2) / BLOCK_SIZE);
+                this.gridX = Math.max(0, Math.min(COLS - this.width, playerCenterGrid - Math.floor(this.width / 2)));
+            }
+            
+            lockPosition() { this.lockedX = this.gridX; }
+            
+            update() {
+                this.gridY += this.dropSpeed;
+                if (this.checkLanding()) {
+                    this.gridY = Math.floor(this.gridY);
+                    this.adjustToLanding();
+                    this.place();
+                    return true;
+                }
+                if (this.checkCrushingPlayer()) {
+                    gameOver();
+                    return true;
+                }
+                return false;
+            }
+            
+            checkLanding() {
+                for (let y = 0; y < this.height; y++) {
+                    for (let x = 0; x < this.width; x++) {
+                        if (!this.shape[y][x]) continue;
+                        const checkY = Math.floor(this.gridY) + y + 1;
+                        const checkX = this.gridX + x;
+                        if (checkY >= ROWS) return true;
+                        if (checkY >= 0 && grid[checkY] && grid[checkY][checkX]) return true;
+                    }
+                }
+                return false;
+            }
+            
+            adjustToLanding() {
+                while (this.checkLanding() && this.gridY > -this.height) { this.gridY -= 0.1; }
+                this.gridY = Math.floor(this.gridY + 0.5);
+            }
+            
+            checkCrushingPlayer() {
+                const playerRect = player.getRect();
+                for (let y = 0; y < this.height; y++) {
+                    for (let x = 0; x < this.width; x++) {
+                        if (!this.shape[y][x]) continue;
+                        const blockLeft = (this.gridX + x) * BLOCK_SIZE;
+                        const blockRight = blockLeft + BLOCK_SIZE;
+                        const blockTop = (this.gridY + y) * BLOCK_SIZE;
+                        const blockBottom = blockTop + BLOCK_SIZE;
+                        const hOverlap = playerRect.right > blockLeft + 4 && playerRect.left < blockRight - 4;
+                        if (hOverlap && blockBottom >= playerRect.top && blockTop < playerRect.top + 10) return true;
+                    }
+                }
+                return false;
+            }
+            
+            place() {
+                const placeY = Math.floor(this.gridY);
+                for (let y = 0; y < this.height; y++) {
+                    for (let x = 0; x < this.width; x++) {
+                        if (!this.shape[y][x]) continue;
+                        const gridYPos = placeY + y;
+                        const gridXPos = this.gridX + x;
+                        if (gridYPos >= 0 && gridYPos < ROWS && gridXPos >= 0 && gridXPos < COLS) {
+                            grid[gridYPos][gridXPos] = this.color;
+                        }
+                        if (gridYPos <= 0) { gameOver(); return; }
+                    }
+                }
+                if (this.isPlayerInsideBlock()) { gameOver(); return; }
+                survivedBlocks++;
+                score += 10;
+                updateUI();
+                checkLines();
+            }
+            
+            isPlayerInsideBlock() {
+                const playerRect = player.getRect();
+                const placeY = Math.floor(this.gridY);
+                for (let y = 0; y < this.height; y++) {
+                    for (let x = 0; x < this.width; x++) {
+                        if (!this.shape[y][x]) continue;
+                        const blockLeft = (this.gridX + x) * BLOCK_SIZE;
+                        const blockRight = blockLeft + BLOCK_SIZE;
+                        const blockTop = (placeY + y) * BLOCK_SIZE;
+                        const blockBottom = blockTop + BLOCK_SIZE;
+                        const playerCenterX = playerRect.left + (playerRect.right - playerRect.left) / 2;
+                        const playerCenterY = playerRect.top + (playerRect.bottom - playerRect.top) / 2;
+                        if (playerCenterX > blockLeft && playerCenterX < blockRight && playerCenterY > blockTop && playerCenterY < blockBottom) return true;
+                    }
+                }
+                return false;
+            }
+            
+            draw(phase) {
+                const displayX = (phase === 'dropping') ? this.lockedX : this.gridX;
+                const displayY = (phase === 'dropping') ? this.gridY : 0;
+                for (let y = 0; y < this.height; y++) {
+                    for (let x = 0; x < this.width; x++) {
+                        if (!this.shape[y][x]) continue;
+                        const px = (displayX + x) * BLOCK_SIZE;
+                        const py = displayY * BLOCK_SIZE + y * BLOCK_SIZE;
+                        
+                        if (phase === 'tracking') {
+                            ctx.fillStyle = this.color + '60';
+                            ctx.strokeStyle = this.color;
+                            ctx.lineWidth = 2;
+                            ctx.fillRect(px + 2, y * BLOCK_SIZE + 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4);
+                            ctx.strokeRect(px + 2, y * BLOCK_SIZE + 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4);
+                            ctx.setLineDash([5, 5]);
+                            ctx.strokeStyle = this.color + '40';
+                            ctx.beginPath();
+                            ctx.moveTo(px + BLOCK_SIZE / 2, (y + 1) * BLOCK_SIZE);
+                            ctx.lineTo(px + BLOCK_SIZE / 2, canvas.height);
+                            ctx.stroke();
+                            ctx.setLineDash([]);
+                        } else if (phase === 'locked') {
+                            const blink = Math.sin(Date.now() / 100) > 0;
+                            ctx.fillStyle = blink ? this.color + 'CC' : this.color + '60';
+                            ctx.strokeStyle = '#ffc107';
+                            ctx.lineWidth = 3;
+                            ctx.fillRect(px + 2, y * BLOCK_SIZE + 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4);
+                            ctx.strokeRect(px + 2, y * BLOCK_SIZE + 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4);
+                            ctx.fillStyle = this.color + '25';
+                            ctx.fillRect(px, (y + 1) * BLOCK_SIZE, BLOCK_SIZE, canvas.height);
+                        } else if (phase === 'dropping' && py > -BLOCK_SIZE) {
+                            ctx.fillStyle = this.color;
+                            ctx.fillRect(px, py, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+                            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                            ctx.fillRect(px, py, BLOCK_SIZE - 1, 5);
+                        }
+                    }
+                }
+            }
+        }
+        
+        function rotateCurrentBlock() {
+            if (currentBlock && (blockPhase === 'tracking' || blockPhase === 'locked')) {
+                currentBlock.rotate();
+                const hint = document.getElementById('rotateHint');
+                hint.classList.add('show');
+                setTimeout(() => hint.classList.remove('show'), 500);
+            }
+        }
+        
+        function getRandomTetromino() { return TETROMINOES[Math.floor(Math.random() * TETROMINOES.length)]; }
+        
+        function drawNextBlock() {
+            nextCtx.fillStyle = 'rgba(0,0,0,0.3)';
+            nextCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+            if (!nextTetromino) return;
+            const shape = nextTetromino.shape;
+            const color = nextTetromino.color;
+            const blockSize = 20;
+            const offsetX = (nextCanvas.width - shape[0].length * blockSize) / 2;
+            const offsetY = (nextCanvas.height - shape.length * blockSize) / 2;
+            for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[0].length; x++) {
+                    if (shape[y][x]) {
+                        nextCtx.fillStyle = color;
+                        nextCtx.fillRect(offsetX + x * blockSize, offsetY + y * blockSize, blockSize - 2, blockSize - 2);
+                        nextCtx.fillStyle = 'rgba(255,255,255,0.3)';
+                        nextCtx.fillRect(offsetX + x * blockSize, offsetY + y * blockSize, blockSize - 2, 4);
+                    }
+                }
+            }
+        }
+        
+        function initGrid() {
+            grid = [];
+            for (let y = 0; y < ROWS; y++) { grid[y] = new Array(COLS).fill(null); }
+        }
+        
+        function drawGrid() {
+            ctx.fillStyle = '#0a0a15';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#1a1a30';
+            ctx.lineWidth = 1;
+            for (let x = 0; x <= COLS; x++) {
+                ctx.beginPath(); ctx.moveTo(x * BLOCK_SIZE, 0); ctx.lineTo(x * BLOCK_SIZE, canvas.height); ctx.stroke();
+            }
+            for (let y = 0; y <= ROWS; y++) {
+                ctx.beginPath(); ctx.moveTo(0, y * BLOCK_SIZE); ctx.lineTo(canvas.width, y * BLOCK_SIZE); ctx.stroke();
+            }
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (grid[y][x]) {
+                        ctx.fillStyle = grid[y][x];
+                        ctx.fillRect(x * BLOCK_SIZE + 1, y * BLOCK_SIZE + 1, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
+                        ctx.fillStyle = 'rgba(255,255,255,0.25)';
+                        ctx.fillRect(x * BLOCK_SIZE + 1, y * BLOCK_SIZE + 1, BLOCK_SIZE - 2, 5);
+                    }
+                }
+            }
+        }
+        
+        function checkLines() {
+            let linesCleared = 0;
+            for (let y = ROWS - 1; y >= 0; y--) {
+                if (grid[y].every(cell => cell !== null)) {
+                    grid.splice(y, 1);
+                    grid.unshift(new Array(COLS).fill(null));
+                    linesCleared++;
+                    y++;
+                }
+            }
+            if (linesCleared > 0) { clearedLines += linesCleared; score += linesCleared * 100; updateUI(); }
+        }
+        
+        function spawnBlock() {
+            if (nextTetromino) { currentBlock = new FallingBlock(nextTetromino); } 
+            else { currentBlock = new FallingBlock(getRandomTetromino()); }
+            nextTetromino = getRandomTetromino();
+            drawNextBlock();
+            blockPhase = 'tracking';
+            phaseStartTime = Date.now();
+            updatePhaseIndicator();
+        }
+        
+        function updatePhaseIndicator() {
+            const indicator = document.getElementById('phaseIndicator');
+            const timerBar = document.getElementById('timerBar');
+            indicator.classList.remove('hidden', 'tracking', 'locked', 'dropping');
+            timerBar.classList.remove('tracking', 'locked');
+            if (blockPhase === 'tracking') {
+                indicator.textContent = '🎯 추적 중... (회전: ▼)';
+                indicator.classList.add('tracking');
+                timerBar.classList.add('tracking');
+            } else if (blockPhase === 'locked') {
+                indicator.textContent = '⚠️ 위치 고정! 피해!';
+                indicator.classList.add('locked');
+                timerBar.classList.add('locked');
+            } else if (blockPhase === 'dropping') {
+                indicator.textContent = '💥 낙하!';
+                indicator.classList.add('dropping');
+            }
+        }
+        
+        function updateUI() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('survived').textContent = survivedBlocks;
+            document.getElementById('lines').textContent = clearedLines;
+        }
+        
+        function gameOver() {
+            gameRunning = false;
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('gameOverOverlay').classList.remove('hidden');
+            document.getElementById('phaseIndicator').classList.add('hidden');
+        }
+        
+        function startGame() {
+            initGrid();
+            player = new Player();
+            currentBlock = null;
+            nextTetromino = getRandomTetromino();
+            score = 0; survivedBlocks = 0; clearedLines = 0;
+            gameRunning = true;
+            keys = {};
+            document.getElementById('startOverlay').classList.add('hidden');
+            document.getElementById('gameOverOverlay').classList.add('hidden');
+            document.getElementById('phaseIndicator').classList.remove('hidden');
+            updateUI(); drawNextBlock(); spawnBlock();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        function gameLoop() {
+            if (!gameRunning) return;
+            drawGrid(); player.update(); player.draw();
+            const elapsed = Date.now() - phaseStartTime;
+            const timerBar = document.getElementById('timerBar');
+            
+            if (currentBlock) {
+                if (blockPhase === 'tracking') {
+                    currentBlock.updatePosition(player.x);
+                    currentBlock.draw('tracking');
+                    const remaining = TRACKING_TIME - elapsed;
+                    timerBar.style.width = Math.max(0, (remaining / TRACKING_TIME) * 100) + '%';
+                    if (elapsed >= TRACKING_TIME) {
+                        currentBlock.lockPosition(); blockPhase = 'locked'; phaseStartTime = Date.now(); updatePhaseIndicator();
+                    }
+                } else if (blockPhase === 'locked') {
+                    currentBlock.gridX = currentBlock.lockedX; currentBlock.draw('locked');
+                    const remaining = LOCKED_TIME - elapsed;
+                    timerBar.style.width = Math.max(0, (remaining / LOCKED_TIME) * 100) + '%';
+                    if (elapsed >= LOCKED_TIME) {
+                        blockPhase = 'dropping'; phaseStartTime = Date.now(); updatePhaseIndicator(); timerBar.style.width = '0%';
+                    }
+                } else if (blockPhase === 'dropping') {
+                    currentBlock.gridX = currentBlock.lockedX;
+                    const isPlaced = currentBlock.update();
+                    if (!isPlaced) { currentBlock.draw('dropping'); } 
+                    else { if (gameRunning) spawnBlock(); }
+                }
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        // ⌨️ PC용 키보드 리스너
+        window.addEventListener('keydown', (e) => {
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
+            keys[e.code] = true;
+            if (e.code === 'ArrowUp' && gameRunning && player) player.jump();
+            if (e.code === 'ArrowDown' && gameRunning) rotateCurrentBlock();
+        });
+        window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+        // 📱 모바일 터치 이벤트 바인딩 함수
+        function setupMobileButton(elementId, keyCode) {
+            const btn = document.getElementById(elementId);
+            
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                keys[keyCode] = true;
+                
+                if (keyCode === 'ArrowUp' && gameRunning && player) player.jump();
+                if (keyCode === 'ArrowDown' && gameRunning) rotateCurrentBlock();
+            });
+            
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                keys[keyCode] = false;
+            });
+        }
+
+        setupMobileButton('padLeft', 'ArrowLeft');
+        setupMobileButton('padRight', 'ArrowRight');
+        setupMobileButton('padUp', 'ArrowUp');
+        setupMobileButton('padDown', 'ArrowDown');
+    </script>
+</body>
+</html>
