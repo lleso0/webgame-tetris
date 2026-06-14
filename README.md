@@ -1,4 +1,4 @@
-[index.html](https://github.com/user-attachments/files/28925048/default.html)
+[index.html]
 <!DOCTYPE html>
 <html lang="ko">
 <head>
