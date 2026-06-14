@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>테트리스 피하기</title>
+    <title>테트리스 피하기 - 모바일 최적화본</title>
     <style>
         * {
             margin: 0;
@@ -11,20 +11,22 @@
             box-sizing: border-box;
             /* 모바일 터치 시 파란색 깜빡임 제거 */
             -webkit-tap-highlight-color: transparent;
-            /* 텍스트 선택 방지 */
+            /* 텍스트 선택 및 롱터치 팝업 방지 */
             user-select: none;
             -webkit-user-select: none;
+            -webkit-touch-callout: none;
         }
 
         body {
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             min-height: 100vh;
+            min-height: -webkit-fill-available; /* 모바일 주소창 대응 */
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             font-family: 'Segoe UI', sans-serif;
-            overflow: hidden;
+            overflow: hidden; /* 스크롤 방지 */
             padding: 10px;
         }
 
@@ -44,6 +46,7 @@
             border-radius: 8px;
             box-shadow: 0 0 30px rgba(74, 158, 255, 0.3);
             background-color: #0a0a15;
+            display: block;
             max-width: 100%;
             height: auto;
         }
@@ -118,7 +121,7 @@
         .controls p {
             font-size: 0.85em;
             color: #eee;
-            margin-bottom: 30px;
+            margin-bottom: 8px;
         }
 
         .key {
@@ -133,10 +136,10 @@
             display: none;
             grid-template-columns: repeat(3, 1fr);
             grid-template-rows: repeat(2, 1fr);
-            gap: 12px;
+            gap: 10px;
             width: 100%;
-            max-width: 320px;
-            margin-top: 25px;
+            max-width: 280px;
+            margin-top: 15px;
         }
 
         .touch-btn {
@@ -144,11 +147,11 @@
             border: 2px solid rgba(74, 158, 255, 0.5);
             border-radius: 12px;
             color: white;
-            font-size: 1.6em;
+            font-size: 1.4em;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 60px;
+            height: 50px;
             cursor: pointer;
             transition: background 0.1s;
         }
@@ -251,25 +254,75 @@
         /* 📱 모바일 디바이스 스타일 (화면 가로가 768px 이하) */
         @media (max-width: 768px) {
             body {
-                justify-content: flex-start;
-                overflow-y: auto;
+                justify-content: center;
+                overflow: hidden;
             }
             .game-wrapper {
                 flex-direction: column;
                 align-items: center;
-                gap: 15px;
+                gap: 10px;
+            }
+            
+            /* 모바일에서 게임 가로폭에 맞춰 캔버스 크기 다운사이징 */
+            #gameCanvas {
+                width: 240px;
+                height: 480px;
+            }
+            
+            /* 점수판을 상단 레이아웃으로 변경 */
+            .info-panel {
+                width: 240px;
+                display: flex;
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                padding: 8px 12px;
+                border-radius: 8px;
+                order: -1; /* 캔버스보다 위로 올림 */
+            }
+            .info-panel h2, .controls { display: none; } 
+            
+            .stat { 
+                flex-direction: column; 
+                margin-bottom: 0;
+                align-items: center;
+            }
+            .stat-label { font-size: 0.7em; }
+            .stat-value { font-size: 1.1em; }
+            
+            .next-block { 
+                margin-top: 0; 
+                padding-top: 0; 
+                border-top: none; 
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+            .next-block h3 { display: none; } /* 텍스트 숨김 */
+            #nextBlockCanvas {
+                width: 45px;
+                height: 30px;
+            }
+            
+            .mobile-pad { 
+                display: grid; 
+            }
+        }
+
+        /* 📱 높이가 극단적으로 작은 모바일 대응 (아이폰 SE 등) */
+        @media (max-height: 700px) and (max-width: 768px) {
+            #gameCanvas {
+                width: 200px;
+                height: 400px;
             }
             .info-panel {
-                width: 300px;
-                display: flex;
-                flex-wrap: wrap;
-                justify-content: space-between;
-                padding: 15px;
+                width: 200px;
+                padding: 5px 10px;
             }
-            .info-panel h2, .controls { display: none; } /* 설명란은 모바일에서 숨김 */
-            .stat { flex-direction: column; min-width: 70px; }
-            .next-block { margin-top: 0; padding-top: 0; border-top: none; }
-            .mobile-pad { display: grid; } /* 모바일 패드 표시 */
+            .stat-value { font-size: 1em; }
+            #nextBlockCanvas { width: 36px; height: 24px; }
+            .touch-btn { height: 42px; font-size: 1.2em; }
+            .mobile-pad { max-width: 240px; margin-top: 10px; gap: 6px; }
         }
     </style>
 </head>
@@ -447,7 +500,7 @@
                         
                         if (this.x + this.width > blockLeft + 2 && this.x < blockRight - 2) {
                             if (this.vy >= 0 && this.y + this.height > blockTop && this.y + this.height < blockBottom && this.y < blockTop) {
-                                this.y = blockTop - this.height;
+                                    this.y = blockTop - this.height;
                                 this.vy = 0;
                                 this.onGround = true;
                                 this.jumpCount = 0;
@@ -666,16 +719,16 @@
             if (!nextTetromino) return;
             const shape = nextTetromino.shape;
             const color = nextTetromino.color;
-            const blockSize = 20;
+            const blockSize = nextCanvas.width / 6; // 모바일 축소 대응 유연한 크기 계산
             const offsetX = (nextCanvas.width - shape[0].length * blockSize) / 2;
             const offsetY = (nextCanvas.height - shape.length * blockSize) / 2;
             for (let y = 0; y < shape.length; y++) {
                 for (let x = 0; x < shape[0].length; x++) {
                     if (shape[y][x]) {
                         nextCtx.fillStyle = color;
-                        nextCtx.fillRect(offsetX + x * blockSize, offsetY + y * blockSize, blockSize - 2, blockSize - 2);
+                        nextCtx.fillRect(offsetX + x * blockSize, offsetY + y * blockSize, blockSize - 1, blockSize - 1);
                         nextCtx.fillStyle = 'rgba(255,255,255,0.3)';
-                        nextCtx.fillRect(offsetX + x * blockSize, offsetY + y * blockSize, blockSize - 2, 4);
+                        nextCtx.fillRect(offsetX + x * blockSize, offsetY + y * blockSize, blockSize - 1, 3);
                     }
                 }
             }
@@ -738,11 +791,11 @@
             indicator.classList.remove('hidden', 'tracking', 'locked', 'dropping');
             timerBar.classList.remove('tracking', 'locked');
             if (blockPhase === 'tracking') {
-                indicator.textContent = '🎯 추적 중... (회전: ▼)';
+                indicator.textContent = '🎯 추적 중...';
                 indicator.classList.add('tracking');
                 timerBar.classList.add('tracking');
             } else if (blockPhase === 'locked') {
-                indicator.textContent = '⚠️ 위치 고정! 피해!';
+                indicator.textContent = '⚠️ 위치 고정!';
                 indicator.classList.add('locked');
                 timerBar.classList.add('locked');
             } else if (blockPhase === 'dropping') {
@@ -820,22 +873,25 @@
         });
         window.addEventListener('keyup', (e) => { keys[e.code] = false; });
 
-        // 📱 모바일 터치 이벤트 바인딩 함수
+        // 📱 모바일 터치 이벤트 바인딩 함수 (터치 유실 방지 및 기본 동작 제어 적용)
         function setupMobileButton(elementId, keyCode) {
             const btn = document.getElementById(elementId);
             
-            btn.addEventListener('touchstart', (e) => {
+            const onPress = (e) => {
                 e.preventDefault();
                 keys[keyCode] = true;
-                
                 if (keyCode === 'ArrowUp' && gameRunning && player) player.jump();
                 if (keyCode === 'ArrowDown' && gameRunning) rotateCurrentBlock();
-            });
+            };
             
-            btn.addEventListener('touchend', (e) => {
+            const onRelease = (e) => {
                 e.preventDefault();
                 keys[keyCode] = false;
-            });
+            };
+
+            btn.addEventListener('touchstart', onPress, {passive: false});
+            btn.addEventListener('touchend', onRelease, {passive: false});
+            btn.addEventListener('touchcancel', onRelease, {passive: false});
         }
 
         setupMobileButton('padLeft', 'ArrowLeft');
